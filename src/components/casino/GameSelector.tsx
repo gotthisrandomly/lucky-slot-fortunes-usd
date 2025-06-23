@@ -16,9 +16,9 @@ const GameSelector: React.FC<GameSelectorProps> = ({ selectedGame, onGameSelect 
   ];
 
   return (
-    <Card>
+    <Card className="bg-gray-900 border-gray-700">
       <CardHeader>
-        <CardTitle>Select Game</CardTitle>
+        <CardTitle className="text-white">Select Game</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {games.map((game) => (
@@ -26,7 +26,11 @@ const GameSelector: React.FC<GameSelectorProps> = ({ selectedGame, onGameSelect 
             key={game.id}
             onClick={() => onGameSelect(game.id)}
             variant={selectedGame === game.id ? 'default' : 'outline'}
-            className="w-full justify-start"
+            className={`w-full justify-start ${
+              selectedGame === game.id 
+                ? 'bg-red-600 hover:bg-red-700 text-white' 
+                : 'border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white'
+            }`}
           >
             <span className="mr-2">{game.icon}</span>
             {game.name}

@@ -8,14 +8,14 @@ interface SlotReelsProps {
 
 const SlotReels: React.FC<SlotReelsProps> = ({ reels, spinning }) => {
   return (
-    <div className="flex justify-center space-x-2 bg-black p-4 rounded-lg">
+    <div className="flex justify-center space-x-2 bg-gray-900 p-6 rounded-lg border border-red-500/30">
       {reels.map((reel, reelIndex) => (
-        <div key={reelIndex} className="bg-white rounded border-2 border-gray-300 overflow-hidden">
+        <div key={reelIndex} className="bg-black rounded border-2 border-red-400 overflow-hidden shadow-lg">
           <div className={`transition-transform duration-100 ${spinning ? 'animate-bounce' : ''}`}>
             {reel.map((symbol, symbolIndex) => (
               <div
                 key={symbolIndex}
-                className="w-20 h-20 flex items-center justify-center text-4xl border-b border-gray-200 last:border-b-0"
+                className="w-20 h-20 flex items-center justify-center text-4xl border-b border-red-500/30 last:border-b-0 bg-gradient-to-b from-gray-800 to-black"
               >
                 {symbol}
               </div>

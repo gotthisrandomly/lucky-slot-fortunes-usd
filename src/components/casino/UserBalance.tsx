@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,46 +13,75 @@ interface UserBalanceProps {
 }
 
 const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpdate }) => {
-  const [depositAmount, setDepositAmount] = useState(50);
+  const [depositAmount, setDepositAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const handleDeposit = async () => {
+    const amount = parseInt(depositAmount);
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid deposit amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // In a real app, this would integrate with payment processors
-      const newBalance = balance + depositAmount;
-      
-      const { error } = await supabase
-        .from('user_balances')
-        .update({ 
-          credits: newBalance,
-          total_deposited: depositAmount 
-        })
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
-      // Record transaction
-      await supabase
+      // Create actual transaction record
+      const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           user_id: userId,
           type: 'deposit',
-          amount: depositAmount,
-          description: 'Account deposit'
+          amount: amount,
+          description: `Deposit of $${amount}`
+        });
+
+      if (transactionError) throw transactionError;
+
+      // Update user balance
+      const newBalance = balance + amount;
+      const { error: balanceError } = await supabase
+        .from('user_balances')
+        .update({ 
+          credits: newBalance,
+          total_deposited: (await supabase
+            .from('user_balances')
+            .select('total_deposited')
+            .eq('user_id', userId)
+            .single()
+          ).data?.total_deposited + amount
+        })
+        .eq('user_id', userId);
+
+      if (balanceError) throw balanceError;
+
+      // Create payment record
+      await supabase
+        .from('payment_records')
+        .insert({
+          user_id: userId,
+          amount: amount,
+          status: 'completed',
+          payment_method: 'instant_deposit',
+          completed_at: new Date().toISOString()
         });
 
       onBalanceUpdate(newBalance);
+      setDepositAmount('');
       
       toast({
         title: "Deposit successful!",
-        description: `Added $${depositAmount} to your account`,
+        description: `$${amount} has been added to your account`,
       });
     } catch (error: any) {
+      console.error('Deposit error:', error);
       toast({
         title: "Deposit failed",
-        description: error.message,
+        description: error.message || "An error occurred during deposit",
         variant: "destructive",
       });
     } finally {
@@ -63,46 +91,51 @@ const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpd
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    window.location.href = '/';
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Account Balance</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="text-center">
-          <p className="text-3xl font-bold text-green-600">${balance}</p>
-          <p className="text-sm text-muted-foreground">Available Credits</p>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="deposit">Add Funds ($)</Label>
-          <Input
-            id="deposit"
-            type="number"
-            value={depositAmount}
-            onChange={(e) => setDepositAmount(Math.max(1, parseInt(e.target.value) || 1))}
-            min="1"
-          />
-          <Button
-            onClick={handleDeposit}
-            disabled={loading}
-            className="w-full"
-          >
-            {loading ? 'Processing...' : 'Deposit'}
-          </Button>
-        </div>
+    <div className="space-y-4">
+      <Card className="bg-gray-900 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Account Balance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-green-400 mb-4">
+            ${balance}
+          </div>
+          
+          <div className="space-y-3">
+            <Input
+              type="number"
+              placeholder="Deposit amount"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              className="bg-gray-800 border-gray-600 text-white"
+            />
+            <Button 
+              onClick={handleDeposit}
+              disabled={loading}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              {loading ? 'Processing...' : 'Deposit'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          className="w-full"
-        >
-          Logout
-        </Button>
-      </CardContent>
-    </Card>
+      <Card className="bg-gray-900 border-gray-700">
+        <CardContent className="pt-6">
+          <Button 
+            onClick={handleLogout}
+            variant="outline"
+            className="w-full border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
+          >
+            Logout
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
