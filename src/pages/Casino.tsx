@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SlotMachine from '@/components/slots/SlotMachine';
+import EnhancedSlotMachine from '@/components/slots/EnhancedSlotMachine';
 import UserBalance from '@/components/casino/UserBalance';
 import GameSelector from '@/components/casino/GameSelector';
 
@@ -42,7 +42,6 @@ const Casino = () => {
 
       if (error) {
         console.error('Error fetching balance:', error);
-        // Create balance if it doesn't exist
         const { error: insertError } = await supabase
           .from('user_balances')
           .insert({ user_id: userId, credits: 0 });
@@ -65,25 +64,31 @@ const Casino = () => {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
-        {/* Casino background */}
+        {/* Enhanced casino background with more elements */}
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-red-900">
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-10 left-10 text-8xl animate-pulse">🎰</div>
-            <div className="absolute top-20 right-20 text-7xl">🎲</div>
+            <div className="absolute top-20 right-20 text-7xl animate-bounce">🎲</div>
             <div className="absolute bottom-20 left-20 text-7xl">♠️</div>
-            <div className="absolute bottom-10 right-10 text-8xl">💎</div>
+            <div className="absolute bottom-10 right-10 text-8xl animate-pulse">💎</div>
+            <div className="absolute top-1/2 left-1/4 text-6xl animate-spin">🃏</div>
+            <div className="absolute top-1/3 right-1/3 text-7xl">♥️</div>
+            <div className="absolute bottom-1/3 left-1/2 text-6xl">♣️</div>
+            <div className="absolute top-1/4 left-1/2 text-4xl animate-pulse">🍒</div>
+            <div className="absolute top-3/4 right-1/4 text-5xl">🔔</div>
+            <div className="absolute top-1/6 right-1/6 text-5xl animate-bounce">💰</div>
           </div>
         </div>
         
-        <Card className="w-96 bg-gray-900 border-gray-700 relative z-10">
+        <Card className="w-96 bg-gray-900 border-yellow-500/50 relative z-10 shadow-2xl">
           <CardHeader>
-            <CardTitle className="text-center text-2xl font-bold text-white">SlotMansD Casino</CardTitle>
+            <CardTitle className="text-center text-2xl font-bold text-yellow-400">SlotMansD Casino</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-center text-gray-300">Please log in to play</p>
             <Button 
               onClick={() => window.location.href = '/auth'} 
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
+              className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-black font-bold"
             >
               Login / Sign Up
             </Button>
@@ -95,38 +100,50 @@ const Casino = () => {
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden p-4">
-      {/* Casino background */}
+      {/* Enhanced casino background */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-red-900">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 text-6xl animate-pulse">🎰</div>
-          <div className="absolute top-20 right-20 text-5xl">🎲</div>
+          <div className="absolute top-20 right-20 text-5xl animate-bounce">🎲</div>
           <div className="absolute bottom-20 left-20 text-5xl">♠️</div>
-          <div className="absolute bottom-10 right-10 text-6xl">💎</div>
-          <div className="absolute top-1/2 left-1/4 text-4xl">🃏</div>
+          <div className="absolute bottom-10 right-10 text-6xl animate-pulse">💎</div>
+          <div className="absolute top-1/2 left-1/4 text-4xl animate-spin">🃏</div>
           <div className="absolute top-1/3 right-1/3 text-5xl">♥️</div>
           <div className="absolute bottom-1/3 left-1/2 text-4xl">♣️</div>
+          <div className="absolute top-1/4 left-1/2 text-4xl animate-pulse">🍒</div>
+          <div className="absolute top-3/4 right-1/4 text-5xl">🔔</div>
+          <div className="absolute top-1/6 right-1/6 text-4xl animate-bounce">💰</div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10">
         <header className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2">SlotMansD Casino</h1>
-          <p className="text-xl text-red-300">Premium Slot Gaming Experience</p>
+          <h1 className="text-6xl font-bold text-yellow-400 mb-2 drop-shadow-lg">SlotMansD Casino</h1>
+          <p className="text-2xl text-orange-300">Premium Slot Gaming Experience</p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="lg:col-span-1 space-y-4">
             <UserBalance balance={balance} userId={user.id} onBalanceUpdate={updateBalance} />
             <GameSelector selectedGame={selectedGame} onGameSelect={setSelectedGame} />
           </div>
 
-          <div className="lg:col-span-3">
-            <SlotMachine 
-              gameType={selectedGame}
-              userId={user.id}
-              balance={balance}
-              onBalanceUpdate={updateBalance}
-            />
+          <div className="lg:col-span-4">
+            {selectedGame === 'classic' ? (
+              <EnhancedSlotMachine 
+                gameType={selectedGame}
+                userId={user.id}
+                balance={balance}
+                onBalanceUpdate={updateBalance}
+              />
+            ) : (
+              <SlotMachine 
+                gameType={selectedGame}
+                userId={user.id}
+                balance={balance}
+                onBalanceUpdate={updateBalance}
+              />
+            )}
           </div>
         </div>
       </div>
