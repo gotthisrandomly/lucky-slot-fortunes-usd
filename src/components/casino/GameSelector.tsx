@@ -10,7 +10,8 @@ interface GameSelectorProps {
 
 const GameSelector: React.FC<GameSelectorProps> = ({ selectedGame, onGameSelect }) => {
   const games = [
-    { id: 'classic', name: 'Classic Slots', icon: '🎰' },
+    { id: 'classic', name: 'Enhanced Slots', icon: '🎰' },
+    { id: 'golden-lion', name: 'Great Golden Lion', icon: '🦁' },
     { id: 'fruit', name: 'Fruit Machine', icon: '🍒' },
     { id: 'gems', name: 'Gem Hunter', icon: '💎' }
   ];

@@ -55,13 +55,11 @@ const EnhancedSlotReels: React.FC<EnhancedSlotReelsProps> = ({
             
             <div 
               className={`
-                transition-transform duration-150 
-                ${spinning ? 'animate-spin' : ''} 
-                flex flex-col
+                transition-transform duration-150 flex flex-col
+                ${spinning ? 'animate-bounce' : ''}
               `}
               style={{
                 transform: spinning ? 'translateY(-50px)' : 'translateY(0)',
-                animation: spinning ? 'slot-spin 0.1s linear infinite' : 'none',
               }}
             >
               {reel.map((symbol, symbolIndex) => (
@@ -92,13 +90,6 @@ const EnhancedSlotReels: React.FC<EnhancedSlotReelsProps> = ({
           </div>
         ))}
       </div>
-
-      <style jsx>{`
-        @keyframes slot-spin {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(-20px); }
-        }
-      `}</style>
     </div>
   );
 };
