@@ -104,16 +104,16 @@ const PaymentManagement = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-              <p className="font-semibold text-yellow-800">Bitcoin Integration</p>
-              <p className="text-sm text-yellow-700">
-                Bitcoin payment processing will be implemented with proper wallet integration
+            <div className="p-4 bg-green-50 border border-green-200 rounded">
+              <p className="font-semibold text-green-800">PayNow.gg Integration</p>
+              <p className="text-sm text-green-700">
+                PayNow.gg provides secure payment processing for gaming applications
               </p>
             </div>
             <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-              <p className="font-semibold text-blue-800">USD Payment Processing</p>
+              <p className="font-semibold text-blue-800">Multiple Payment Methods</p>
               <p className="text-sm text-blue-700">
-                Stripe/PayPal integration for credit card and bank transfers
+                PayNow supports credit cards, bank transfers, and cryptocurrencies
               </p>
             </div>
           </div>

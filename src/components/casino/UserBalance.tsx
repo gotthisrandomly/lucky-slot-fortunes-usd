@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface UserBalanceProps {
   balance: number;
@@ -15,6 +16,9 @@ interface UserBalanceProps {
 const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpdate }) => {
   const [depositAmount, setDepositAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState('');
+  const [paymentSessionId, setPaymentSessionId] = useState('');
   const { toast } = useToast();
 
   const handleDeposit = async () => {
@@ -30,30 +34,127 @@ const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpd
 
     setLoading(true);
     try {
-      // Create actual transaction record
+      // Create PayNow payment session through edge function
+      const response = await fetch(`https://qyuugweuggzzfcwsvdie.supabase.co/functions/v1/process-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          userId,
+          amount,
+          currency: 'USD',
+          returnUrl: window.location.href
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create payment session');
+      }
+
+      // Store checkout info and open dialog
+      setCheckoutUrl(result.checkout_url);
+      setPaymentSessionId(result.session_id);
+      setPaymentDialogOpen(true);
+    } catch (error: any) {
+      console.error('Deposit error:', error);
+      toast({
+        title: "Payment initiation failed",
+        description: error.message || "An error occurred creating payment session",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaymentVerification = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`https://qyuugweuggzzfcwsvdie.supabase.co/functions/v1/verify-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          userId,
+          sessionId: paymentSessionId
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to verify payment');
+      }
+
+      if (result.status === 'completed') {
+        onBalanceUpdate(result.balance);
+        setDepositAmount('');
+        setPaymentDialogOpen(false);
+        
+        toast({
+          title: "Deposit successful!",
+          description: `Your payment has been processed successfully`,
+        });
+      } else {
+        toast({
+          title: "Payment pending",
+          description: "Your payment is still being processed. Please try verifying again in a moment.",
+        });
+      }
+    } catch (error: any) {
+      console.error('Payment verification error:', error);
+      toast({
+        title: "Payment verification failed",
+        description: error.message || "An error occurred verifying your payment",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // This is a fallback for direct deposit (e.g. for testing)
+  const handleDirectDeposit = async () => {
+    const amount = parseInt(depositAmount);
+    if (!amount || amount <= 0) return;
+    
+    setLoading(true);
+    try {
+      // Create transaction record
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           user_id: userId,
           type: 'deposit',
           amount: amount,
-          description: `Deposit of $${amount}`
+          description: `Direct deposit of $${amount}`
         });
 
       if (transactionError) throw transactionError;
 
       // Update user balance
-      const newBalance = balance + amount;
+      const { data: userBalance, error: balanceFetchError } = await supabase
+        .from('user_balances')
+        .select('credits, total_deposited')
+        .eq('user_id', userId)
+        .single();
+        
+      if (balanceFetchError) throw balanceFetchError;
+      
+      const newBalance = (userBalance.credits || 0) + amount;
+      const newTotalDeposited = (userBalance.total_deposited || 0) + amount;
+      
       const { error: balanceError } = await supabase
         .from('user_balances')
         .update({ 
           credits: newBalance,
-          total_deposited: (await supabase
-            .from('user_balances')
-            .select('total_deposited')
-            .eq('user_id', userId)
-            .single()
-          ).data?.total_deposited + amount
+          total_deposited: newTotalDeposited
         })
         .eq('user_id', userId);
 
@@ -66,7 +167,7 @@ const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpd
           user_id: userId,
           amount: amount,
           status: 'completed',
-          payment_method: 'instant_deposit',
+          payment_method: 'direct_deposit',
           completed_at: new Date().toISOString()
         });
 
@@ -74,7 +175,7 @@ const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpd
       setDepositAmount('');
       
       toast({
-        title: "Deposit successful!",
+        title: "Direct deposit successful!",
         description: `$${amount} has been added to your account`,
       });
     } catch (error: any) {
@@ -113,13 +214,23 @@ const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpd
               onChange={(e) => setDepositAmount(e.target.value)}
               className="bg-gray-800 border-gray-600 text-white"
             />
-            <Button 
-              onClick={handleDeposit}
-              disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              {loading ? 'Processing...' : 'Deposit'}
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                onClick={handleDeposit}
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+              >
+                {loading ? 'Processing...' : 'Deposit'}
+              </Button>
+              <Button 
+                onClick={handleDirectDeposit}
+                disabled={loading}
+                variant="outline"
+                className="w-full border-green-500 text-green-400 hover:bg-green-900"
+              >
+                Direct Deposit
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -135,6 +246,36 @@ const UserBalance: React.FC<UserBalanceProps> = ({ balance, userId, onBalanceUpd
           </Button>
         </CardContent>
       </Card>
+      
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-gray-900 text-white border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Complete Your Payment</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Please complete the payment process with PayNow.gg
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <p className="text-sm text-gray-300">Amount: ${depositAmount}</p>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => window.open(checkoutUrl, '_blank')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Go to Payment Page
+              </Button>
+              <Button
+                onClick={handlePaymentVerification}
+                variant="outline"
+                disabled={loading}
+                className="border-green-500 text-green-400 hover:bg-green-900"
+              >
+                {loading ? 'Verifying...' : 'I\'ve Completed Payment'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
