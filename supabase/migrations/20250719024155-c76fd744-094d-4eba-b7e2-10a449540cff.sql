@@ -87,7 +87,7 @@ BEGIN
   VALUES (new.id, new.raw_user_meta_data ->> 'username');
   
   INSERT INTO public.user_balances (user_id, credits)
-  VALUES (new.id, 1000); -- Give new users 1000 free credits
+  VALUES (new.id, 0); -- New users start with $0
   
   INSERT INTO public.user_roles (user_id, role)
   VALUES (new.id, 'player');
